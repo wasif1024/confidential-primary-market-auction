@@ -23,14 +23,15 @@ A confidential auction system where bid amounts and bidder identities remain enc
 - **Fair Price Discovery**: Bidders can submit their true valuations without strategic concerns
 
 ### Auction Mechanisms
-- **First-Price Auction**: Winner pays their bid amount
-- **Second-Price Auction (Vickrey)**: Winner pays the second-highest bid, encouraging truthful bidding
+- **First-Price Auction**: The highest bidder wins and pays their bid amount. All bid information remains confidential until resolution.
+- **Second-Price Auction (Vickrey)**: The highest bidder wins but pays the second-highest bid amount. This mechanism encourages truthful bidding as bidders have incentive to bid their true valuation. All bid information remains confidential until resolution.
 
 ### Core Operations
 - **Initialize Auction**: Set up auction parameters (type, minimum bid, end time) with encrypted state initialization
 - **Place Bid**: Submit encrypted bids that update the auction state confidentially without revealing amounts or identities
 - **Close Auction**: Auction authority closes the bidding period, preventing new bids from being placed
 - **Resolve First-Price Auction**: For first-price auctions, determines the winner (highest bidder) and payment amount (their bid) through confidential computation, revealing results only after the auction is closed
+- **Resolve Second-Price Auction**: For second-price (Vickrey) auctions, determines the winner (highest bidder) and payment amount (second-highest bid) through confidential computation, encouraging truthful bidding
 
 ### Technical Implementation
 - Built on Solana using Anchor framework for on-chain state management
@@ -40,9 +41,15 @@ A confidential auction system where bid amounts and bidder identities remain enc
 
 ## Auction Lifecycle
 
-1. **Open**: Auction accepts encrypted bids while keeping all information confidential. Bids are processed confidentially and update the encrypted auction state.
+1. **Open**: Auction accepts encrypted bids while keeping all information confidential. Bids are processed confidentially and update the encrypted auction state, tracking the highest and second-highest bids without revealing their values or bidders.
+
 2. **Closed**: Auction authority closes the bidding period, preventing new bids from being placed. The auction status transitions from Open to Closed.
-3. **Resolved**: For first-price auctions, the authority calls the resolve instruction which uses confidential computation to determine the winner and payment amount. The winner's identity and payment amount are revealed, and the auction status is set to Resolved.
+
+3. **Resolved**: The authority calls the appropriate resolve instruction based on auction type:
+   - **First-Price**: Uses confidential computation to determine the winner (highest bidder) who pays their bid amount
+   - **Second-Price (Vickrey)**: Uses confidential computation to determine the winner (highest bidder) who pays the second-highest bid amount
+   
+   The winner's identity and payment amount are revealed, and the auction status is set to Resolved.
 
 ## Use Cases
 
