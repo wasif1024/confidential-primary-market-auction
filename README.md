@@ -4,6 +4,8 @@
 
 This project implements a confidential sealed-bid auction primitive for DeFi primary markets, enabling private price discovery and MEV-resistant asset allocation using MPC-based confidential computing on Solana.
 
+![Confidential Primary Market Auction](assets/confidential_primary_market.png)
+
 ## Why Primary Markets?
 
 Primary markets are where new assets are issued and capital is formed. On public blockchains, transparent bidding leads to:
