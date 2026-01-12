@@ -2,14 +2,25 @@
 
 **MEV-resistant sealed-bid auctions for DeFi primary markets using MPC-based confidential compute on Solana.**
 
-## Why This Works
+This project implements a confidential sealed-bid auction primitive for DeFi primary markets, enabling private price discovery and MEV-resistant asset allocation using MPC-based confidential computing on Solana.
 
-This project addresses critical challenges in DeFi capital formation by combining:
+## Why Primary Markets?
 
-- **MEV Resistance**: Sealed-bid architecture prevents front-running and bid manipulation through confidential computing
-- **Primary Markets**: Enables fair, transparent capital formation for token launches and fundraising
-- **MPC-Based Confidential Compute**: Uses Arcium's multi-party computation network to process bids confidentially
-- **Solana**: Leverages Solana's high throughput and low latency for efficient auction execution
+Primary markets are where new assets are issued and capital is formed. On public blockchains, transparent bidding leads to:
+
+- **Bid sniping and MEV extraction**: Front-runners can observe and outbid participants at the last moment
+- **Whale dominance during token launches**: Large bidders can signal their intent, discouraging smaller participants
+- **Manipulated price discovery**: Strategic bidding behavior distorts true market valuations
+- **Strategic information leakage**: Public bid visibility enables collusion and coordination attacks
+
+Sealed-bid auctions with confidential compute restore fairness by keeping bids private until settlement, ensuring all participants have equal opportunity regardless of size or timing.
+
+## Threat Model & Mitigations
+
+- **Front-running** → prevented via encrypted bids that remain confidential during the bidding period
+- **Bid sniping** → no mid-auction visibility of bid amounts or bidders
+- **Whale signaling** → bid amounts remain confidential, preventing market manipulation through size revelation
+- **MEV extraction** → sealed execution with delayed reveal ensures no extractable value from bid information
 
 ## Overview
 
