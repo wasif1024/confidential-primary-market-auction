@@ -29,7 +29,8 @@ A confidential auction system where bid amounts and bidder identities remain enc
 ### Core Operations
 - **Initialize Auction**: Set up auction parameters (type, minimum bid, end time) with encrypted state initialization
 - **Place Bid**: Submit encrypted bids that update the auction state confidentially without revealing amounts or identities
-- **Resolve Auction**: Determine winner and payment amount based on auction type, revealing results only after bidding closes
+- **Close Auction**: Auction authority closes the bidding period, preventing new bids from being placed
+- **Resolve First-Price Auction**: For first-price auctions, determines the winner (highest bidder) and payment amount (their bid) through confidential computation, revealing results only after the auction is closed
 
 ### Technical Implementation
 - Built on Solana using Anchor framework for on-chain state management
@@ -39,9 +40,9 @@ A confidential auction system where bid amounts and bidder identities remain enc
 
 ## Auction Lifecycle
 
-1. **Open**: Auction accepts encrypted bids while keeping all information confidential
-2. **Closed**: Bidding period ends, no new bids accepted
-3. **Resolved**: Winner determined and payment amount calculated based on auction type
+1. **Open**: Auction accepts encrypted bids while keeping all information confidential. Bids are processed confidentially and update the encrypted auction state.
+2. **Closed**: Auction authority closes the bidding period, preventing new bids from being placed. The auction status transitions from Open to Closed.
+3. **Resolved**: For first-price auctions, the authority calls the resolve instruction which uses confidential computation to determine the winner and payment amount. The winner's identity and payment amount are revealed, and the auction status is set to Resolved.
 
 ## Use Cases
 
