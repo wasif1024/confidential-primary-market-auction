@@ -1,121 +1,65 @@
-# Structure of this project
+# Confidential Primary Market Auction
 
-This project is structured pretty similarly to how a regular Solana Anchor project is structured. The main difference lies in there being two places to write code here:
+This project implements a confidential primary market auction system on Solana using Arcium's confidential computing framework. The auction supports both first-price and second-price (Vickrey) auction mechanisms while keeping bid amounts and bidder identities confidential until the auction is resolved.
 
-- The `programs` dir like usual Anchor programs
-- The `encrypted-ixs` dir for confidential computing instructions
+## Project Structure
 
-When working with plaintext data, we can edit it inside our program as normal. When working with confidential data though, state transitions take place off-chain using the Arcium network as a co-processor. For this, we then always need two instructions in our program: one that gets called to initialize a confidential computation, and one that gets called when the computation is done and supplies the resulting data. Additionally, since the types and operations in a Solana program and in a confidential computing environment are a bit different, we define the operations themselves in the `encrypted-ixs` dir using our Rust-based framework called Arcis. To link all of this together, we provide a few macros that take care of ensuring the correct accounts and data are passed for the specific initialization and callback functions:
+This project follows a similar structure to a standard Solana Anchor project, with one key difference: there are two distinct places where code is written:
 
-```rust
-// encrypted-ixs/add_together.rs
+- **The `programs` directory**: Contains the standard Solana Anchor program code that handles on-chain state management, account validation, and instruction processing.
 
-use arcis_imports::*;
+- **The `encrypted-ixs` directory**: Contains confidential computing instructions written using Arcis, Arcium's Rust-based framework for defining operations that execute in a confidential computing environment.
 
-#[encrypted]
-mod circuits {
-    use arcis_imports::*;
+## How It Works
 
-    pub struct InputValues {
-        v1: u8,
-        v2: u8,
-    }
+When working with plaintext data, operations are handled directly in the Solana program as usual. However, when working with confidential data (such as bid amounts and bidder identities), state transitions occur off-chain using the Arcium network as a co-processor.
 
-    #[instruction]
-    pub fn add_together(input_ctxt: Enc<Shared, InputValues>) -> Enc<Shared, u16> {
-        let input = input_ctxt.to_arcis();
-        let sum = input.v1 as u16 + input.v2 as u16;
-        input_ctxt.owner.from_arcis(sum)
-    }
-}
+For each confidential operation, the program requires two instructions:
+1. **Initialization instruction**: Called to start a confidential computation, which queues the work on the Arcium network.
+2. **Callback instruction**: Called when the computation completes, receiving the encrypted results and updating the on-chain state accordingly.
 
-// programs/my_program/src/lib.rs
+The Arcium framework provides macros that automatically handle the correct accounts and data passing for these initialization and callback functions, ensuring proper integration between the Solana program and the confidential computing environment.
 
-use anchor_lang::prelude::*;
-use arcium_anchor::prelude::*;
+## Auction Features
 
-declare_id!("<some ID>");
+### Auction Types
+- **First-Price Auction**: The winner pays their bid amount
+- **Second-Price Auction (Vickrey)**: The winner pays the second-highest bid amount
 
-#[arcium_program]
-pub mod my_program {
-    use super::*;
+### Auction Lifecycle
+1. **Open**: The auction is accepting bids
+2. **Closed**: The auction has ended and is no longer accepting bids
+3. **Resolved**: The winner has been determined and the auction is complete
 
-    pub fn init_add_together_comp_def(ctx: Context<InitAddTogetherCompDef>) -> Result<()> {
-        init_comp_def(ctx.accounts, None, None)?;
-        Ok(())
-    }
+### Confidential Operations
 
-    pub fn add_together(
-        ctx: Context<AddTogether>,
-        computation_offset: u64,
-        ciphertext_0: [u8; 32],
-        ciphertext_1: [u8; 32],
-        pubkey: [u8; 32],
-        nonce: u128,
-    ) -> Result<()> {
-        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
-        let args = ArgBuilder::new()
-            .x25519_pubkey(pubkey)
-            .plaintext_u128(nonce)
-            .encrypted_u8(ciphertext_0)
-            .encrypted_u8(ciphertext_1)
-            .build();
+The following operations are performed confidentially using the Arcium network:
 
-        queue_computation(
-            ctx.accounts,
-            computation_offset,
-            args,
-            None,
-            vec![AddTogetherCallback::callback_ix(
-                computation_offset,
-                &ctx.accounts.mxe_account,
-                &[]
-            )?],
-            1,
-            0,
-        )?;
-        Ok(())
-    }
+- **Initializing Auction State**: Sets up the encrypted auction state with initial values
+- **Placing Bids**: Processes bids confidentially, updating the highest and second-highest bid information without revealing bid amounts or bidder identities
+- **Determining Winners**: Computes the auction winner and payment amount based on the auction type, revealing the result only when the auction is resolved
 
-    #[arcium_callback(encrypted_ix = "add_together")]
-    pub fn add_together_callback(
-        ctx: Context<AddTogetherCallback>,
-        output: SignedComputationOutputs<AddTogetherOutput>,
-    ) -> Result<()> {
-        let o = match output.verify_output(&ctx.accounts.cluster_account, &ctx.accounts.computation_account) {
-            Ok(AddTogetherOutput { field_0 }) => field_0,
-            Err(_) => return Err(ErrorCode::AbortedComputation.into()),
-        };
+### Key Features
 
-        emit!(SumEvent {
-            sum: o.ciphertexts[0],
-            nonce: o.nonce.to_le_bytes(),
-        });
-        Ok(())
-    }
-}
+- **Confidential Bidding**: Bid amounts and bidder identities remain encrypted during the auction
+- **Minimum Bid Requirements**: Auctions can specify a minimum bid amount
+- **Time-Limited**: Auctions have an end time after which no new bids are accepted
+- **Bid Tracking**: The system tracks the total number of bids placed
+- **Event Emission**: The program emits events for auction creation, bid placement, auction closure, and resolution
 
-#[queue_computation_accounts("add_together", payer)]
-#[derive(Accounts)]
-#[instruction(computation_offset: u64)]
-pub struct AddTogether<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    // ... other required accounts
-}
+## Account Structure
 
-#[callback_accounts("add_together")]
-#[derive(Accounts)]
-pub struct AddTogetherCallback<'info> {
-    // ... required accounts
-    pub some_extra_acc: AccountInfo<'info>,
-}
+The program manages an `Auction` account that stores:
+- Auction authority and configuration (type, minimum bid, end time)
+- Current auction status
+- Encrypted state containing confidential bid information
+- Bid count and nonce for state verification
 
-#[init_computation_definition_accounts("add_together", payer)]
-#[derive(Accounts)]
-pub struct InitAddTogetherCompDef<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    // ... other required accounts
-}
-```
+## Error Handling
+
+The program includes comprehensive error handling for:
+- Aborted computations
+- Cluster configuration issues
+- Auction state validation (open/closed status)
+- Auction type mismatches
+- Unauthorized operations
