@@ -1,65 +1,58 @@
 # Confidential Primary Market Auction
 
-This project implements a confidential primary market auction system on Solana using Arcium's confidential computing framework. The auction supports both first-price and second-price (Vickrey) auction mechanisms while keeping bid amounts and bidder identities confidential until the auction is resolved.
+**MEV-resistant sealed-bid auctions for DeFi primary markets using MPC-based confidential compute on Solana.**
+
+## Why This Works
+
+This project addresses critical challenges in DeFi capital formation by combining:
+
+- **MEV Resistance**: Sealed-bid architecture prevents front-running and bid manipulation through confidential computing
+- **Primary Markets**: Enables fair, transparent capital formation for token launches and fundraising
+- **MPC-Based Confidential Compute**: Uses Arcium's multi-party computation network to process bids confidentially
+- **Solana**: Leverages Solana's high throughput and low latency for efficient auction execution
+
+## Overview
+
+A confidential auction system where bid amounts and bidder identities remain encrypted during the bidding period, preventing MEV extraction and ensuring fair price discovery. The system supports both first-price and second-price (Vickrey) auction mechanisms, making it suitable for various primary market use cases including token launches, NFT drops, and fundraising rounds.
+
+## Key Features
+
+### Sealed-Bid Architecture
+- **Confidential Bidding**: All bid amounts and bidder identities are encrypted using MPC until auction resolution
+- **MEV Protection**: Prevents front-running, sandwich attacks, and bid manipulation by keeping bids private
+- **Fair Price Discovery**: Bidders can submit their true valuations without strategic concerns
+
+### Auction Mechanisms
+- **First-Price Auction**: Winner pays their bid amount
+- **Second-Price Auction (Vickrey)**: Winner pays the second-highest bid, encouraging truthful bidding
+
+### Core Operations
+- **Initialize Auction**: Set up auction parameters (type, minimum bid, end time) with encrypted state initialization
+- **Place Bid**: Submit encrypted bids that update the auction state confidentially without revealing amounts or identities
+- **Resolve Auction**: Determine winner and payment amount based on auction type, revealing results only after bidding closes
+
+### Technical Implementation
+- Built on Solana using Anchor framework for on-chain state management
+- Uses Arcium's MPC network for confidential computation off-chain
+- Arcis framework for defining encrypted instructions
+- Automatic account and data handling through Arcium macros
+
+## Auction Lifecycle
+
+1. **Open**: Auction accepts encrypted bids while keeping all information confidential
+2. **Closed**: Bidding period ends, no new bids accepted
+3. **Resolved**: Winner determined and payment amount calculated based on auction type
+
+## Use Cases
+
+- Token launch auctions for fair price discovery
+- NFT primary market sales
+- DeFi protocol fundraising rounds
+- Any scenario requiring confidential bidding with MEV protection
 
 ## Project Structure
 
-This project follows a similar structure to a standard Solana Anchor project, with one key difference: there are two distinct places where code is written:
+- **`programs/`**: Solana Anchor program handling on-chain state, account validation, and instruction processing
+- **`encrypted-ixs/`**: Arcis-based confidential computing instructions for encrypted operations
 
-- **The `programs` directory**: Contains the standard Solana Anchor program code that handles on-chain state management, account validation, and instruction processing.
-
-- **The `encrypted-ixs` directory**: Contains confidential computing instructions written using Arcis, Arcium's Rust-based framework for defining operations that execute in a confidential computing environment.
-
-## How It Works
-
-When working with plaintext data, operations are handled directly in the Solana program as usual. However, when working with confidential data (such as bid amounts and bidder identities), state transitions occur off-chain using the Arcium network as a co-processor.
-
-For each confidential operation, the program requires two instructions:
-1. **Initialization instruction**: Called to start a confidential computation, which queues the work on the Arcium network.
-2. **Callback instruction**: Called when the computation completes, receiving the encrypted results and updating the on-chain state accordingly.
-
-The Arcium framework provides macros that automatically handle the correct accounts and data passing for these initialization and callback functions, ensuring proper integration between the Solana program and the confidential computing environment.
-
-## Auction Features
-
-### Auction Types
-- **First-Price Auction**: The winner pays their bid amount
-- **Second-Price Auction (Vickrey)**: The winner pays the second-highest bid amount
-
-### Auction Lifecycle
-1. **Open**: The auction is accepting bids
-2. **Closed**: The auction has ended and is no longer accepting bids
-3. **Resolved**: The winner has been determined and the auction is complete
-
-### Confidential Operations
-
-The following operations are performed confidentially using the Arcium network:
-
-- **Initializing Auction State**: Sets up the encrypted auction state with initial values
-- **Placing Bids**: Processes bids confidentially, updating the highest and second-highest bid information without revealing bid amounts or bidder identities
-- **Determining Winners**: Computes the auction winner and payment amount based on the auction type, revealing the result only when the auction is resolved
-
-### Key Features
-
-- **Confidential Bidding**: Bid amounts and bidder identities remain encrypted during the auction
-- **Minimum Bid Requirements**: Auctions can specify a minimum bid amount
-- **Time-Limited**: Auctions have an end time after which no new bids are accepted
-- **Bid Tracking**: The system tracks the total number of bids placed
-- **Event Emission**: The program emits events for auction creation, bid placement, auction closure, and resolution
-
-## Account Structure
-
-The program manages an `Auction` account that stores:
-- Auction authority and configuration (type, minimum bid, end time)
-- Current auction status
-- Encrypted state containing confidential bid information
-- Bid count and nonce for state verification
-
-## Error Handling
-
-The program includes comprehensive error handling for:
-- Aborted computations
-- Cluster configuration issues
-- Auction state validation (open/closed status)
-- Auction type mismatches
-- Unauthorized operations
+The system uses a two-phase approach for confidential operations: initialization instructions queue computations on the Arcium network, and callback instructions receive encrypted results to update on-chain state.
